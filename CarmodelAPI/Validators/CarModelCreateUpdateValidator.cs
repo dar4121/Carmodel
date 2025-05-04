@@ -39,8 +39,7 @@ namespace CarmodelAPI.Validators
                 .WithMessage("Price cannot be negative");
 
             RuleFor(x => x.DateofManufacturing)
-                .LessThanOrEqualTo(DateTime.Now)
-                .When(x => x.DateofManufacturing.HasValue)
+                .Must(date => !date.HasValue || date.Value.Date <= DateTime.Now.Date)
                 .WithMessage("Manufacturing date cannot be in the future");
 
             RuleFor(x => x.Description)

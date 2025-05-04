@@ -1,8 +1,27 @@
-const apiBase = 'https://localhost:7003/api/CarModels';
-const imgApi = 'https://localhost:7003/api/CarModelImages';
-const imgBaseUrl = 'https://localhost:7003'; // Add this line for image base URL
-const brandApi = 'https://localhost:7003/api/CarModels/Brands';
-const classApi = 'https://localhost:7003/api/CarModels/Classes';
+if (typeof window.apiBase === 'undefined') {
+    window.apiBase = 'https://localhost:7003/api/CarModels';
+    window.imgApi = 'https://localhost:7003/api/CarModelImages';
+    window.imgBaseUrl = 'https://localhost:7003';
+    window.brandApi = 'https://localhost:7003/api/CarModels/Brands';
+    window.classApi = 'https://localhost:7003/api/CarModels/Classes';
+    window.defaultCarImage = '/images/cars/default-car.jpg';
+}
+
+
+toastr.options = {
+    "closeButton": true,
+    "progressBar": true,
+    "positionClass": "toast-top-right",
+    "preventDuplicates": true,
+    "showDuration": "200",
+    "hideDuration": "800",
+    "timeOut": "5000",
+    "extendedTimeOut": "1000",
+    "showEasing": "swing",
+    "hideEasing": "linear",
+    "showMethod": "fadeIn",
+    "hideMethod": "fadeOut"
+};
 
 $(document).ready(function () {
     loadDropdownData();
@@ -10,20 +29,20 @@ $(document).ready(function () {
     initValidation();
     initDragAndDrop();
 
-    // Add buttons for opening modals
+
     $('#addNewModelBtn').on('click', function () {
         openCarModelModal();
     });
 
-    // Fix modal close buttons
+
     $('.modal .close, .modal .btn-secondary').on('click', function () {
         $(this).closest('.modal').modal('hide');
     });
 });
 
 function loadDropdownData() {
-    // Load brands
-    $.get(brandApi)
+
+    $.get(window.brandApi)
         .done(function (brands) {
             $('#BrandId').empty();
             $('#BrandId').append('<option value="">Select Brand</option>');
@@ -35,8 +54,8 @@ function loadDropdownData() {
             console.error('Error loading brands:', error);
         });
 
-    // Load classes
-    $.get(classApi)
+
+    $.get(window.classApi)
         .done(function (classes) {
             $('#ClassId').empty();
             $('#ClassId').append('<option value="">Select Class</option>');
@@ -50,22 +69,47 @@ function loadDropdownData() {
 }
 
 function initCarModelsTable() {
+
+    if ($.fn.DataTable.isDataTable('#carModelsTable')) {
+        $('#carModelsTable').DataTable().destroy();
+    }
+
     $('#carModelsTable').DataTable({
         ajax: {
-            url: apiBase,
+            url: window.apiBase,
             dataSrc: ''
         },
         rowReorder: {
-            dataSrc: 'sortOrder'
+            dataSrc: 'sortOrder',
+            selector: 'td:not(:last-child)',
+            handle: true
         },
+        order: [[4, 'asc']], 
         columns: [
-            { data: 'modelName' },
-            { data: 'modelCode' },
-            { data: 'brandName' },
-            { data: 'className' },
-            { data: 'sortOrder' },
+            {
+                data: 'modelName',
+                className: 'reorder-handle'
+            },
+            {
+                data: 'modelCode',
+                className: 'reorder-handle'
+            },
+            {
+                data: 'brandName',
+                className: 'reorder-handle'
+            },
+            {
+                data: 'className',
+                className: 'reorder-handle'
+            },
+            {
+                data: 'sortOrder',
+                className: 'reorder-handle'
+            },
             {
                 data: null,
+                className: 'action-column',
+                orderable: false,
                 render: function (data) {
                     return `
                         <div data-model-id="${data.modelId}">
@@ -83,7 +127,7 @@ function initCarModelsTable() {
         }
     });
 
-    // Setup button event handlers using delegated events
+
     $('#carModelsTable').on('click', '.view-btn', function () {
         const modelId = $(this).parent().data('model-id');
         viewCarModelDetails(modelId);
@@ -108,27 +152,61 @@ function initCarModelsTable() {
 function initDragAndDrop() {
     const table = $('#carModelsTable').DataTable();
 
-    table.on('row-reorder', function (e, diff, edit) {
+    table.on('row-reorder', function (e, diff) {
+        if (!diff || diff.length === 0) return;
+
+       
+        const allRows = table.rows().data().toArray();
         const updates = [];
-        for (let i = 0; i < diff.length; i++) {
-            // Get the model ID from the data attribute
-            const modelId = $(diff[i].node).data('model-id');
+
+      
+        const positionToModelId = {};
+        allRows.forEach((row, index) => {
+            positionToModelId[index] = row.modelId;
+        });
+
+        
+        const newOrder = [...allRows].map(row => row.modelId);
+
+      
+        diff.forEach(item => {
+            const modelId = positionToModelId[item.oldPosition];
+           
+            newOrder.splice(item.oldPosition, 1);
+            newOrder.splice(item.newPosition, 0, modelId);
+        });
+
+        
+        for (let i = 0; i < newOrder.length; i++) {
             updates.push({
-                modelId: modelId,
-                sortOrder: diff[i].newPosition
+                modelId: newOrder[i],
+                sortOrder: i + 1 
             });
         }
 
         if (updates.length > 0) {
+         
+            const loadingOverlay = $('<div class="loading-overlay"><div class="spinner-border text-primary" role="status"><span class="sr-only">Updating order...</span></div></div>');
+            $('body').append(loadingOverlay);
+
             $.ajax({
-                url: `${apiBase}/UpdateSortOrder`,
+                url: `${window.apiBase}/UpdateSortOrder`,
                 type: 'PUT',
                 contentType: 'application/json',
                 data: JSON.stringify(updates)
             })
+                .done(function () {
+                    toastr.success('Sort order updated successfully');
+                  
+                    table.ajax.reload(null, false); 
+                })
                 .fail(function (error) {
-                    alert('Error updating sort order: ' + error.responseText);
+                    toastr.error('Error updating sort order: ' + error.responseText);
                     table.ajax.reload();
+                })
+                .always(function () {
+                   
+                    loadingOverlay.remove();
                 });
         }
     });
@@ -137,13 +215,13 @@ function initDragAndDrop() {
 function openCarModelModal(id = null) {
     resetForm('#carModelForm');
 
-    // Always ensure dropdown data is loaded
+
     loadDropdownData();
 
     if (id) {
-        $.get(`${apiBase}/${id}`)
+        $.get(`${window.apiBase}/${id}`)
             .done(function (data) {
-                // Set values immediately and then update dropdowns after they're loaded
+
                 $('#Id').val(data.modelId);
                 $('#ModelName').val(data.modelName);
                 $('#ModelCode').val(data.modelCode);
@@ -151,9 +229,8 @@ function openCarModelModal(id = null) {
                 $('#Features').val(data.features);
                 $('#Price').val(data.price);
 
-                // Fix date formatting before setting it in the date picker
+
                 if (data.dateofManufacturing) {
-                    // Convert the date string to a Date object and format it as YYYY-MM-DD for the date picker
                     const date = new Date(data.dateofManufacturing);
                     if (!isNaN(date.getTime())) {
                         const formattedDate = date.toISOString().split('T')[0];
@@ -161,26 +238,28 @@ function openCarModelModal(id = null) {
                     }
                 }
 
-                // Set dropdown values after a short delay to ensure they're loaded
+
                 setTimeout(function () {
                     $('#BrandId').val(data.brandId);
                     $('#ClassId').val(data.classId);
                 }, 200);
 
                 $('#carModelModal').modal('show');
+                toastr.info('Editing car model: ' + data.modelName);
             })
             .fail(function (error) {
-                alert('Error fetching car model: ' + JSON.stringify(error));
+                toastr.error('Error fetching car model: ' + JSON.stringify(error));
             });
     } else {
         $('#carModelModal').modal('show');
+        toastr.info('Creating new car model');
     }
 }
 
 function saveCarModel() {
     const form = $('#carModelForm');
 
-    // Check form validation
+
     if (!$(form).valid()) {
         return false;
     }
@@ -198,8 +277,9 @@ function saveCarModel() {
         dateofManufacturing: $('#DateofManufacturing').val()
     };
 
-    const url = id ? `${apiBase}/${id}` : apiBase;
+    const url = id ? `${window.apiBase}/${id}` : window.apiBase;
     const method = id ? 'PUT' : 'POST';
+    const actionText = id ? 'updated' : 'created';
 
     $.ajax({
         url: url,
@@ -209,24 +289,26 @@ function saveCarModel() {
     })
         .done(function () {
             $('#carModelModal').modal('hide');
+            toastr.success(`Car model ${actionText} successfully`);
             $('#carModelsTable').DataTable().ajax.reload();
         })
         .fail(function (error) {
-            alert('Error saving car model: ' + (error.responseText || JSON.stringify(error)));
+            toastr.error('Error saving car model: ' + (error.responseText || JSON.stringify(error)));
         });
 }
 
 function deleteCarModel(id) {
     if (confirm('Are you sure you want to delete this car model?')) {
         $.ajax({
-            url: `${apiBase}/${id}`,
+            url: `${window.apiBase}/${id}`,
             type: 'DELETE'
         })
             .done(function () {
+                toastr.success('Car model deleted successfully');
                 $('#carModelsTable').DataTable().ajax.reload();
             })
             .fail(function (error) {
-                alert('Error deleting car model: ' + error.responseText);
+                toastr.error('Error deleting car model: ' + error.responseText);
             });
     }
 }
@@ -235,10 +317,10 @@ function openImageModal(modelId) {
     resetForm('#imageForm');
     $('#ModelId').val(modelId);
 
-    // Make sure the modal is shown before initializing the table
+
     $('#imageModal').modal('show');
 
-    // Initialize the table after the modal is shown
+
     setTimeout(function () {
         initImagesTable(modelId);
     }, 200);
@@ -251,9 +333,9 @@ function initImagesTable(modelId) {
 
     $('#imagesTable').DataTable({
         ajax: {
-            url: `${imgApi}/model/${modelId}`,
+            url: `${window.imgApi}/model/${modelId}`,
             dataSrc: function (data) {
-                // Return empty array if data is null
+
                 return data || [];
             },
             error: function (xhr, error, thrown) {
@@ -265,9 +347,12 @@ function initImagesTable(modelId) {
             {
                 data: 'imageUrl',
                 render: function (data) {
-                    if (!data) return 'No image';
-                    // Prepend the API base URL to the image path
-                    const fullImageUrl = data.startsWith('http') ? data : `${imgBaseUrl}${data}`;
+                    if (!data) {
+
+                        return `<img src="${window.imgBaseUrl}${window.defaultCarImage}" alt="Default Car Image" style="max-height: 100px;" />`;
+                    }
+
+                    const fullImageUrl = data.startsWith('http') ? data : `${window.imgBaseUrl}${data}`;
                     return `<img src="${fullImageUrl}" alt="Car Image" style="max-height: 100px;" />`;
                 }
             },
@@ -293,11 +378,11 @@ function initImagesTable(modelId) {
         ]
     });
 
-    // Remove previous event handlers to prevent duplicates
+
     $('#imagesTable').off('click', '.delete-image-btn');
     $('#imagesTable').off('click', '.set-default-btn');
 
-    // Add event listeners for image actions
+
     $('#imagesTable').on('click', '.delete-image-btn', function () {
         const imageId = $(this).parent().data('image-id');
         deleteImage(imageId);
@@ -314,25 +399,25 @@ function initImagesTable(modelId) {
 function uploadImage() {
     const formData = new FormData();
 
-    // Add model ID
+
     formData.append('ModelId', $('#ModelId').val());
 
-    // Add IsDefault value
+
     formData.append('IsDefault', $('#IsDefault').prop('checked'));
 
-    // Add all selected files
+
     const fileInput = document.getElementById('Images');
     if (fileInput.files.length > 0) {
         for (let i = 0; i < fileInput.files.length; i++) {
             formData.append('Images', fileInput.files[i]);
         }
     } else {
-        alert('Please select at least one image');
+        toastr.warning('Please select at least one image');
         return;
     }
 
     $.ajax({
-        url: `${imgApi}/Upload`,
+        url: `${window.imgApi}/Upload`,
         type: 'POST',
         data: formData,
         processData: false,
@@ -340,57 +425,60 @@ function uploadImage() {
     })
         .done(function () {
             resetForm('#imageForm');
+            toastr.success('Images uploaded successfully');
             const modelId = $('#ModelId').val();
             initImagesTable(modelId);
         })
         .fail(function (error) {
-            alert('Error uploading images: ' + (error.responseText || JSON.stringify(error)));
+            toastr.error('Error uploading images: ' + (error.responseText || JSON.stringify(error)));
         });
 }
 
 function deleteImage(id) {
     if (confirm('Are you sure you want to delete this image?')) {
         $.ajax({
-            url: `${imgApi}/${id}`,
+            url: `${window.imgApi}/${id}`,
             type: 'DELETE'
         })
             .done(function () {
+                toastr.success('Image deleted successfully');
                 const modelId = $('#ModelId').val();
                 initImagesTable(modelId);
             })
             .fail(function (error) {
-                alert('Error deleting image: ' + error.responseText);
+                toastr.error('Error deleting image: ' + error.responseText);
             });
     }
 }
 
 function setDefaultImage(imageId, modelId) {
     $.ajax({
-        url: `${imgApi}/SetDefaultImage/${imageId}/model/${modelId}`,
+        url: `${window.imgApi}/SetDefaultImage/${imageId}/model/${modelId}`,
         type: 'PUT'
     })
         .done(function () {
+            toastr.success('Default image set successfully');
             initImagesTable(modelId);
         })
         .fail(function (error) {
-            alert('Error setting default image: ' + error.responseText);
+            toastr.error('Error setting default image: ' + error.responseText);
         });
 }
 
 function viewCarModelDetails(id) {
-    $.get(`${apiBase}/${id}`)
+    $.get(`${window.apiBase}/${id}`)
         .done(function (data) {
-            // Store model ID in a hidden input field instead of displaying it
+
             $('#viewModelId').val(data.modelId);
 
-            // Set basic car model details
+
             $('#viewModelName').text(data.modelName);
             $('#viewModelCode').text(data.modelCode);
             $('#viewBrandName').text(data.brandName);
             $('#viewClassName').text(data.className);
             $('#viewPrice').text(formatCurrency(data.price));
 
-            // Format and set the manufacturing date
+
             if (data.dateofManufacturing) {
                 const date = new Date(data.dateofManufacturing);
                 if (!isNaN(date.getTime())) {
@@ -402,37 +490,45 @@ function viewCarModelDetails(id) {
                 $('#viewDateofManufacturing').text('N/A');
             }
 
-            // Set description and features with fallbacks for empty values
+
             $('#viewDescription').html(data.description ? data.description : '<p class="text-muted">No description available</p>');
             $('#viewFeatures').html(data.features ? data.features : '<p class="text-muted">No features available</p>');
 
-            // Fetch the default image for this car model
-            $.get(`${imgApi}/model/${id}/default`)
+
+            $.get(`${window.imgApi}/model/${id}/default`)
                 .done(function (imageData) {
                     if (imageData && imageData.imageUrl) {
                         const fullImageUrl = imageData.imageUrl.startsWith('http') ?
-                            imageData.imageUrl : `${imgBaseUrl}${imageData.imageUrl}`;
+                            imageData.imageUrl : `${window.imgBaseUrl}${imageData.imageUrl}`;
                         $('#viewDefaultImage').html(`
                             <img src="${fullImageUrl}" alt="Default Car Image" 
                                  class="img-fluid" style="max-height: 250px;" />
                         `);
                     } else {
-                        $('#viewDefaultImage').html('<p class="text-muted">No default image available</p>');
+
+                        $('#viewDefaultImage').html(`
+                            <img src="${window.imgBaseUrl}${window.defaultCarImage}" alt="Default Car Image" 
+                                 class="img-fluid" style="max-height: 250px;" />
+                        `);
                     }
                 })
                 .fail(function () {
-                    $('#viewDefaultImage').html('<p class="text-muted">No default image available</p>');
+
+                    $('#viewDefaultImage').html(`
+                        <img src="${window.imgBaseUrl}${window.defaultCarImage}" alt="Default Car Image" 
+                             class="img-fluid" style="max-height: 250px;" />
+                    `);
                 });
 
-            // Show the modal
+
             $('#viewDetailsModal').modal('show');
         })
         .fail(function (error) {
-            alert('Error fetching car model details: ' + (error.responseText || JSON.stringify(error)));
+            toastr.error('Error fetching car model details: ' + (error.responseText || JSON.stringify(error)));
         });
 }
 
-// Helper function to format currency
+
 function formatCurrency(value) {
     if (value == null) return 'N/A';
     return new Intl.NumberFormat('en-US', {
@@ -461,8 +557,9 @@ function initValidation() {
             },
             DateofManufacturing: {
                 date: true,
+                required: true,
                 max: function () {
-                    return new Date().toISOString().split('T')[0]; // Today's date
+                    return new Date().toISOString().split('T')[0];
                 }
             }
         },
@@ -483,6 +580,7 @@ function initValidation() {
                 min: "Price cannot be negative"
             },
             DateofManufacturing: {
+                required: "Date of Manufacturing is required",
                 max: "Manufacturing date cannot be in the future"
             }
         },
@@ -528,11 +626,11 @@ function initValidation() {
         }
     });
 
-    // Add additional validation methods
+
     $.validator.addMethod("extension", function (value, element, param) {
         param = typeof param === "string" ? param.replace(/,/g, "|") : "png|jpe?g|gif";
         if (element.files.length === 0) {
-            return true; // Skip validation if no file selected (required rule will handle this)
+            return true;
         }
 
         let valid = true;
@@ -554,7 +652,7 @@ function resetForm(selector) {
         validator.resetForm();
     }
 
-    // Clear validation errors visually
+
     $(selector).find('.is-invalid').removeClass('is-invalid');
     $(selector).find('.is-valid').removeClass('is-valid');
 }
