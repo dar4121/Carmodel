@@ -1,0 +1,37 @@
+My Approach to Software Development Challenges
+Q1: Dealing with Vague Requirements
+When I'm handed unclear requirements (and let's be honest, that happens a lot!), I don't panic. First, I grab a coffee and sit down with stakeholders to really understand what they're envisioning. There's usually a gap between what they think they've communicated and what they actually have!
+
+I'm a big fan of showing rather than telling. I'll quickly mock up prototypes or wireframes so we can have something tangible to discuss. "Is this what you meant?" works much better than endless requirement documents.
+
+I've learned that assumptions are dangerous, so I document mine and check them with the team. And I'm not afraid to start building incrementally - sometimes seeing the first version helps everyone clarify what they really want for version two.
+
+Q2: Surviving Tight Deadlines
+We've all been there - impossible deadlines and not enough resources! When I'm in this situation, I get pragmatic fast.
+
+I start by having an honest conversation about what's truly essential. I've found that about 20% of features typically deliver 80% of the value, so let's focus there first. I'm not shy about suggesting scope adjustments when necessary - better to deliver something valuable than promise everything and fail.
+
+I make sure my team has what they need and shield them from distractions. Daily stand-ups become crucial to catch issues before they derail us. And throughout the process, I keep stakeholders updated on our progress and any trade-offs we're making.
+
+When things get really tough, I've learned that sometimes a pizza-fueled coding session works wonders - but I'm careful not to burn out the team long-term!
+
+Q3: My Take on Estimation
+Let's be real - estimation is hard! I typically pad my estimates by 25-30% because there are always surprises. I've found breaking work into small chunks (nothing more than 1-2 days) makes estimates much more accurate.
+
+When things still go sideways (and they sometimes do), I don't hide it. I immediately flag the issue and come prepared with options: "We can cut feature X, push the timeline by Y weeks, or bring in help from team Z." Most stakeholders appreciate straight talk and flexibility over surprises.
+
+Each missed estimate is a learning opportunity. Was it unfamiliar technology? Requirements creep? These lessons make the next round of estimates better.
+
+Q4: Where I'm Headed in My Career
+Next year: I want to really nail my current tech stack and start making architectural contributions. I'm eyeing a few certifications that would fill some knowledge gaps.
+
+Two years out: I'd love to be mentoring others and taking ownership of larger features. I find sharing knowledge incredibly rewarding, and I want to help shape our technical decisions.
+
+Five-year vision: I see myself as a technical leader who can bridge between business needs and technical solutions. Whether that's as a senior architect or technical product lead depends on where my interests evolve.
+
+When challenges hit (and they always do!), I focus on staying relevant and connected. The tech industry changes fast, but core problem-solving skills always transfer.
+
+Q5: Thoughts on Recognition and Growth
+Annual reviews with quarterly check-ins feel right to me. But honestly, I value ongoing feedback even more than formal reviews.
+
+Money matters, but it's not everything. I stick around when I'm learning, when I respect my teammates, and when I believe in what we're building. Some of my best growth periods came when I wasn't making top dollar but was surrounded by brilliant people.
