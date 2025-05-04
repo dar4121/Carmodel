@@ -126,7 +126,7 @@ namespace CarmodelAPI.Repository
         {
             try
             {
-                // Check if a model with the same code already exists (except the current one being updated)
+                
                 bool modelCodeExists = await _dbContext.TblCarModels
                     .AnyAsync(m => m.ModelCode == model.ModelCode
                                 && (m.IsDelete == null || m.IsDelete == false)
@@ -139,7 +139,7 @@ namespace CarmodelAPI.Repository
 
                 if (model.ModelId.HasValue && model.ModelId > 0)
                 {
-                    // Update existing model
+                   
                     var existingModel = await _dbContext.TblCarModels
                         .FirstOrDefaultAsync(m => m.ModelId == model.ModelId);
 
@@ -148,7 +148,7 @@ namespace CarmodelAPI.Repository
                         return 0;
                     }
 
-                    // Update model properties but keep the original sort order
+                 
                     existingModel.BrandId = model.BrandId;
                     existingModel.ClassId = model.ClassId;
                     existingModel.ModelName = model.ModelName;
@@ -157,7 +157,7 @@ namespace CarmodelAPI.Repository
                     existingModel.Features = model.Features;
                     existingModel.Price = model.Price;
                     existingModel.DateofManufacturing = model.DateofManufacturing;
-                    // Note: We do not change the sort order during update
+                   
 
                     await _dbContext.SaveChangesAsync();
 
@@ -165,7 +165,7 @@ namespace CarmodelAPI.Repository
                 }
                 else
                 {
-                    // Create new model
+                  
                     int nextSortOrder = 1;
 
                     if (await _dbContext.TblCarModels.AnyAsync(m => m.IsDelete == false || m.IsDelete == null))
@@ -235,37 +235,37 @@ namespace CarmodelAPI.Repository
 
                 try
                 {
-                    // Validate input
+                  
                     if (sortOrders == null || !sortOrders.Any())
                     {
                         return false;
                     }
 
-                    // Get all car models that are not deleted
+                   
                     var allModels = await _dbContext.TblCarModels
                         .Where(m => !m.IsDelete.HasValue || !m.IsDelete.Value)
                         .ToListAsync();
 
-                    // Create a dictionary for quick lookup of models by ID
+                    
                     var modelDict = allModels.ToDictionary(m => m.ModelId);
 
-                    // Validate that we have all models in the update request
+                  
                     foreach (var item in sortOrders)
                     {
                         if (!modelDict.ContainsKey(item.ModelId))
                         {
-                            // Model doesn't exist or is deleted
+                           
                             return false;
                         }
                     }
 
-                    // Create a set of all model IDs included in the sort order update
+                 
                     var updatedModelIds = sortOrders.Select(s => s.ModelId).ToHashSet();
 
-                    // Find any models that aren't included in the sort order update
+             
                     var nonUpdatedModels = allModels.Where(m => !updatedModelIds.Contains(m.ModelId)).ToList();
 
-                    // First update all models in the sort order request
+               
                     foreach (var item in sortOrders)
                     {
                         if (modelDict.TryGetValue(item.ModelId, out var model))
@@ -274,16 +274,16 @@ namespace CarmodelAPI.Repository
                         }
                     }
 
-                    // Handle edge case: if we have models not included in the update
+                  
                     if (nonUpdatedModels.Any())
                     {
-                        // Find the next available sort order
+                      
                         int nextSortOrder = sortOrders.Any() ? sortOrders.Max(s => s.SortOrder) + 1 : 1;
 
-                        // Sort non-updated models by their current sort order to preserve relative ordering
+                      
                         nonUpdatedModels = nonUpdatedModels.OrderBy(m => m.Sortorder).ToList();
 
-                        // Assign sequential sort orders
+                       
                         foreach (var model in nonUpdatedModels)
                         {
                             model.Sortorder = nextSortOrder++;
